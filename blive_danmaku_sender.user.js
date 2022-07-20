@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili直播弹幕防吞
 // @namespace    https://github.com/MicroCBer/BilibiliLiveDanmakuSender
-// @version      0.1.1
+// @version      0.1.2
 // @description  检测并显示B站被B站吞的直播弹幕
 // @author       MicroBlock
 // @match        https://live.bilibili.com/**
@@ -57,6 +57,8 @@
         offset: packageType.WS_SEQUENCE_OFFSET,
         value: packageType.WS_HEADER_DEFAULT_SEQUENCE
     }]
+
+
     let decode=function(t) {
         return decodeURIComponent(window.escape(String.fromCharCode.apply(String, new Uint8Array(t))))
     }
@@ -100,7 +102,8 @@
         return n
     }
 
-    let accepted_texts=[]
+    let accepted_texts=[],enabled=false
+    let danmaku_local_save=[]
 
     let _WebSocket=WebSocket
     class FakeWs{
@@ -109,6 +112,11 @@
 
             if(args[0].includes("chat")){
                 ws.addEventListener("message",(msg)=>{
+                    if(!enabled){
+                        danmaku_local_save=get_danmu(true);
+                        enabled=true
+                    }
+
                     let data=(convertToObject(msg.data))
                     if(data.op===5){
                         for(let message of data.body){
@@ -119,10 +127,10 @@
                     }
                 })
                 ws.addEventListener("error",()=>{
-                    document.location.reload()
+                    enabled=false
                 })
                 ws.addEventListener("close",()=>{
-                    document.location.reload()
+                    enabled=false
                 })
             }
 
@@ -150,42 +158,43 @@
             })
     }
 
+    function get_danmu(received=false){
+        return [...document.querySelectorAll(".chat-item .danmaku-item-right.v-middle.pointer")].map(
+            v=>({
+                text:v.innerText,
+                dom:v,
+                uid:v.parentElement.getAttribute("data-uid"),
+                received,
+                time:new Date().getTime()
+            })).filter(v=>v.uid===document.querySelector(".user-panel-ctnr").children[0].getAttribute("href").split("/").pop())
+    }
+
+    function send_message(msg){
+        var inpEle = document.querySelector(".chat-input")
+        var t = inpEle
+        let evt = document.createEvent('HTMLEvents');
+        evt.initEvent('input', true, true);
+        t.value=msg;
+        t.dispatchEvent(evt)
+        var event = document.createEvent('Event')
+        event.initEvent('keydown', true, false)
+        event = Object.assign(event, {
+            ctrlKey: false,
+            metaKey: false,
+            altKey: false,
+            which: 13,
+            keyCode: 13,
+            key: 'Enter',
+            code: 'Enter'
+        })
+        inpEle.focus()
+        inpEle.dispatchEvent(event)
+    }
+
+
     waitfor(".chat-item .danmaku-item-right.v-middle.pointer").then(()=>{
-        function get_danmu(received=false){
-            return [...document.querySelectorAll(".chat-item .danmaku-item-right.v-middle.pointer")].map(
-                v=>({
-                    text:v.innerText,
-                    dom:v,
-                    uid:v.parentElement.getAttribute("data-uid"),
-                    received,
-                    time:new Date().getTime()
-                })).filter(v=>v.uid===document.querySelector(".user-panel-ctnr").children[0].getAttribute("href").split("/").pop())
-        }
-
-        let danmaku_local_save=get_danmu(true);
 
 
-        function send_message(msg){
-            var inpEle = document.querySelector(".chat-input")
-            var t = inpEle
-            let evt = document.createEvent('HTMLEvents');
-            evt.initEvent('input', true, true);
-            t.value=msg;
-            t.dispatchEvent(evt)
-            var event = document.createEvent('Event')
-            event.initEvent('keydown', true, false)
-            event = Object.assign(event, {
-                ctrlKey: false,
-                metaKey: false,
-                altKey: false,
-                which: 13,
-                keyCode: 13,
-                key: 'Enter',
-                code: 'Enter'
-            })
-            inpEle.focus()
-            inpEle.dispatchEvent(event)
-        }
 
         function update_danmu(){
 
@@ -213,12 +222,12 @@
                 if(text.length<=max_length/2)return text.split('').join(SEPARATOR)
 
                 for(let word of dicts){
-                   if(text.includes(word))text=text.replace(word,word.split('').join(SEPARATOR))
-                   if(text.length==max_length)return text
+                    if(text.includes(word))text=text.replace(word,word.split('').join(SEPARATOR))
+                    if(text.length==max_length)return text
                 }
 
                 for(let char in sensitiveChars){
-                   while(text.includes(char))text=text.replace(char,sensitiveChars[char]);
+                    while(text.includes(char))text=text.replace(char,sensitiveChars[char]);
                 }
 
                 if(text.length>max_length)return null
@@ -243,9 +252,9 @@
                     }))
 
                     if(auto_avoid_kw(msg.text))
-                    msg.dom.parentElement.appendChild(buildBtn("尝试自动修改",()=>{
-                        send_message(auto_avoid_kw(msg.text))
-                    }))
+                        msg.dom.parentElement.appendChild(buildBtn("尝试自动修改",()=>{
+                            send_message(auto_avoid_kw(msg.text))
+                        }))
                     msg.failed=true
                 }
             }
@@ -253,7 +262,14 @@
             danmaku_local_save.push(...updated);
         }
 
-        setInterval(update_danmu,100)
+        setInterval(()=>{
+            if(!danmaku_local_save.length){
+            danmaku_local_save=get_danmu(true);
+            }
+            if(enabled){
+                update_danmu()
+            }
+        },100)
     })
 
 })();
