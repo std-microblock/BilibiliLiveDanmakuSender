@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Bilibili直播弹幕防吞
 // @namespace    https://github.com/MicroCBer/BilibiliLiveDanmakuSender
-// @version      0.1.0
+// @version      0.1.1
 // @description  检测并显示B站被B站吞的直播弹幕
 // @author       MicroBlock
 // @match        https://live.bilibili.com/**
 // @icon         https://www.google.com/s2/favicons?sz=64&domain=bilibili.com
 // @grant        none
+// @license      GPL-3.0-or-later
 // ==/UserScript==
 
 (function() {
@@ -116,6 +117,12 @@
                             }
                         }
                     }
+                })
+                ws.addEventListener("error",()=>{
+                    document.location.reload()
+                })
+                ws.addEventListener("close",()=>{
+                    document.location.reload()
                 })
             }
 
