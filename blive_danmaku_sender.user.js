@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili直播弹幕防吞
 // @namespace    https://github.com/MicroCBer/BilibiliLiveDanmakuSender
-// @version      0.1.4
+// @version      0.1.5
 // @description  检测并显示B站被B站吞的直播弹幕
 // @author       MicroBlock
 // @match        https://live.bilibili.com/**
@@ -252,7 +252,8 @@ const ENABLE_REST_API_CHECK=true; // 是否开启双重发送失败检测
                     if(ENABLE_REST_API_CHECK){
                         msg.dom.style.background="#feb13a";
                         msg.dom.style.color="white"
-                        let data=await(await fetch("https://api.live.bilibili.com/xlive/web-room/v1/dM/gethistory?roomid="+__SSR_INITIAL_STATE__.baseInfoRoom.room_info.room_id)).json()
+                        let roomId=__NEPTUNE_IS_MY_WAIFU__?.roomInitRes?.data?.room_id || __SSR_INITIAL_STATE__.baseInfoRoom.room_info.room_id
+                        let data=await(await fetch("https://api.live.bilibili.com/xlive/web-room/v1/dM/gethistory?roomid="+roomId)).json()
                         if(data.data.room.findIndex(v=>v.text===msg.text)!==-1){
                             msg.received=true
                             msg.dom.style.color="";
