@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili直播弹幕防吞
 // @namespace    https://github.com/MicroCBer/BilibiliLiveDanmakuSender
-// @version      0.1.3
+// @version      0.1.4
 // @description  检测并显示B站被B站吞的直播弹幕
 // @author       MicroBlock
 // @match        https://live.bilibili.com/**
@@ -217,8 +217,12 @@ const ENABLE_REST_API_CHECK=true; // 是否开启双重发送失败检测
                     msg.received=true
                     msg.dom.style.color=""
                     msg.dom.style.background="";
-                    msg.dom.parentElement.lastChild.remove();
-                    msg.dom.parentElement.lastChild.remove();
+                    function removeBtn(){
+                        if(msg.dom.parentElement.lastChild.tagName==="BUTTON")
+                            msg.dom.parentElement.lastChild.remove();
+                    }
+                    removeBtn()
+                    removeBtn()
                 }
             }
 
