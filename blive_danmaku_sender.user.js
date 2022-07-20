@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili直播弹幕防吞
 // @namespace    https://github.com/MicroCBer/BilibiliLiveDanmakuSender
-// @version      0.1.2
+// @version      0.1.3
 // @description  检测并显示B站被B站吞的直播弹幕
 // @author       MicroBlock
 // @match        https://live.bilibili.com/**
@@ -9,6 +9,12 @@
 // @grant        none
 // @license      GPL-3.0-or-later
 // ==/UserScript==
+
+const FAIL_SEND_TIMEOUT=1000; // ms
+const ENABLE_REST_API_CHECK=true; // 是否开启双重发送失败检测
+
+
+
 
 (function() {
     'use strict';
@@ -193,10 +199,7 @@
 
 
     waitfor(".chat-item .danmaku-item-right.v-middle.pointer").then(()=>{
-
-
-
-        function update_danmu(){
+        async function update_danmu(){
 
             let last=danmaku_local_save[danmaku_local_save.length-1]
             let now=get_danmu()
@@ -213,6 +216,9 @@
                     accepted_texts.splice(index,1)
                     msg.received=true
                     msg.dom.style.color=""
+                    msg.dom.style.background="";
+                    msg.dom.parentElement.lastChild.remove();
+                    msg.dom.parentElement.lastChild.remove();
                 }
             }
 
@@ -236,7 +242,20 @@
 
 
             for(let msg of danmaku_local_save){
-                if(!msg.received&&msg.time<(new Date().getTime()-2000)&&!msg.failed){
+                if(!msg.received&&msg.time<(new Date().getTime()-FAIL_SEND_TIMEOUT)&&!msg.failed){
+                    msg.failed=true
+
+                    if(ENABLE_REST_API_CHECK){
+                        msg.dom.style.background="#feb13a";
+                        msg.dom.style.color="white"
+                        let data=await(await fetch("https://api.live.bilibili.com/xlive/web-room/v1/dM/gethistory?roomid="+__SSR_INITIAL_STATE__.baseInfoRoom.room_info.room_id)).json()
+                        if(data.data.room.findIndex(v=>v.text===msg.text)!==-1){
+                            msg.received=true
+                            msg.dom.style.color="";
+                            msg.dom.style.background="";
+                            continue;
+                        }
+                    }
                     msg.dom.style.background="#b22727";
                     msg.dom.style.color="white"
                     function buildBtn(text,onclick){
@@ -255,7 +274,7 @@
                         msg.dom.parentElement.appendChild(buildBtn("尝试自动修改",()=>{
                             send_message(auto_avoid_kw(msg.text))
                         }))
-                    msg.failed=true
+
                 }
             }
 
@@ -264,7 +283,7 @@
 
         setInterval(()=>{
             if(!danmaku_local_save.length){
-            danmaku_local_save=get_danmu(true);
+                danmaku_local_save=get_danmu(true);
             }
             if(enabled){
                 update_danmu()
