@@ -117,10 +117,12 @@ const ENABLE_REST_API_CHECK=true; // 是否开启双重发送失败检测
             let ws = new _WebSocket(...args)
 
             if(args[0].includes("chat")){
-                ws.addEventListener("connect",()=>{
+                ws.addEventListener("open",()=>{
                     if(!enabled){
-                        danmaku_local_save=get_danmu(true);
-                        enabled=true
+                        waitfor(".chat-item .danmaku-item-right.v-middle.pointer").then(()=>{
+                            danmaku_local_save=get_danmu(true);
+                            enabled=true
+                        })
                     }
                 })
                 ws.addEventListener("message",(msg)=>{
