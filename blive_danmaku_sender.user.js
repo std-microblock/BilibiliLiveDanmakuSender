@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Bilibili直播弹幕防吞
 // @namespace    https://github.com/MicroCBer/BilibiliLiveDanmakuSender
-// @version      0.1.5
+// @version      0.1.6
 // @description  检测并显示B站被B站吞的直播弹幕
 // @author       MicroBlock
 // @match        https://live.bilibili.com/**
@@ -117,6 +117,12 @@ const ENABLE_REST_API_CHECK=true; // 是否开启双重发送失败检测
             let ws = new _WebSocket(...args)
 
             if(args[0].includes("chat")){
+                ws.addEventListener("connect",()=>{
+                    if(!enabled){
+                        danmaku_local_save=get_danmu(true);
+                        enabled=true
+                    }
+                })
                 ws.addEventListener("message",(msg)=>{
                     if(!enabled){
                         danmaku_local_save=get_danmu(true);
